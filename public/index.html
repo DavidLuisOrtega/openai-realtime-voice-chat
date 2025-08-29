@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Voice Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #58a6ff 0%, #bc8cff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .state-indicator {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            transition: all 0.3s ease;
+            border: 4px solid transparent;
+        }
+
+        .idle {
+            background: rgba(139, 148, 158, 0.2);
+            border-color: rgba(139, 148, 158, 0.4);
+            color: #8b949e;
+        }
+
+        .connecting {
+            background: rgba(251, 188, 5, 0.2);
+            border-color: rgba(251, 188, 5, 0.4);
+            color: #fbbc05;
+            animation: pulse 1.5s infinite;
+        }
+
+        .connected {
+            background: rgba(46, 160, 67, 0.2);
+            border-color: rgba(46, 160, 67, 0.4);
+            color: #2ea043;
+            animation: connectedGlow 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes connectedGlow {
+            0%, 100% { 
+                transform: scale(1); 
+                box-shadow: 0 0 0 0 rgba(46, 160, 67, 0.4);
+            }
+            50% { 
+                transform: scale(1.05); 
+                box-shadow: 0 0 0 20px rgba(46, 160, 67, 0);
+            }
+        }
+
+        .status-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .voice-selector {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        select option {
+            background: #0f0f23;
+            color: white;
+        }
+
+        .btn {
+            padding: 1.2rem 2rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .primary {
+            background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+            color: white;
+        }
+
+        .primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(46, 160, 67, 0.3);
+        }
+
+        .danger {
+            background: linear-gradient(135deg, #f85149 0%, #da3633 100%);
+            color: white;
+        }
+
+        .chat-area {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 2rem;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            padding: 1.2rem;
+            border-radius: 15px;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-msg {
+            background: rgba(88, 166, 255, 0.15);
+            border-left: 4px solid #58a6ff;
+            margin-left: 2rem;
+        }
+
+        .ai-msg {
+            background: rgba(188, 140, 255, 0.15);
+            border-left: 4px solid #bc8cff;
+            margin-right: 2rem;
+        }
+
+        .tech-note {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 OpenAI Voice Chat</h1>
+
+        <div class="chat-area" id="chatArea">
+            <div class="message ai-msg">
+                <strong>🤖 AI Assistant:</strong><br>
+                Welcome! This is a clean WebRTC implementation that connects directly to OpenAI's Realtime API. 
+                Choose your preferred voice and start the conversation!
+            </div>
+        </div>
+
+        <div class="status-panel">
+            <div class="state-indicator idle" id="stateIndicator">🔌</div>
+            <div class="status-text" id="statusText">Ready to Connect</div>
+
+            <div class="controls">
+                <div class="voice-selector">
+                    <label for="voiceSelect">AI Voice:</label>
+                    <select id="voiceSelect">
+                        <option value="marin" selected>Marin (English)</option>
+                        <option value="alloy">Alloy (English)</option>
+                        <option value="echo">Echo (English)</option>
+                        <option value="sage">Sage (English)</option>
+                        <option value="shimmer">Shimmer (English)</option>
+                        <option value="verse">Verse (English)</option>
+                    </select>
+                </div>
+
+                <button id="startBtn" class="btn primary">🚀 Start Voice Chat</button>
+                <button id="stopBtn" class="btn danger" disabled>🛑 End Chat</button>
+            </div>
+        </div>
+
+        <div class="tech-note">
+            <strong>🔧 WebRTC Implementation:</strong><br>
+            This uses your SDP exchange router to establish a direct WebRTC connection with OpenAI's Realtime API. 
+            Once connected, audio streams in real-time with low latency for natural conversation.
+        </div>
+    </div>
+
+    <script>
+        class CleanVoiceChat {
+            constructor() {
+                this.pc = null;
+                this.audioEl = null;
+                this.isConnected = false;
+                this.currentVoice = 'marin';
+                
+                this.setupUI();
+            }
+
+            setupUI() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.chatArea = document.getElementById('chatArea');
+                this.stateIndicator = document.getElementById('stateIndicator');
+                this.statusText = document.getElementById('statusText');
+                this.voiceSelect = document.getElementById('voiceSelect');
+
+                this.startBtn.onclick = () => this.startVoiceChat();
+                this.stopBtn.onclick = () => this.stopVoiceChat();
+                this.voiceSelect.onchange = () => this.changeVoice();
+            }
+
+            updateStatus(text, state = 'idle') {
+                this.statusText.textContent = text;
+                this.stateIndicator.className = `state-indicator ${state}`;
+                
+                const icons = {
+                    idle: '🔌',
+                    connecting: '⏳',
+                    connected: '🎤'
+                };
+                
+                this.stateIndicator.textContent = icons[state] || '🔌';
+            }
+
+            addMessage(content, isUser = false) {
+                const div = document.createElement('div');
+                div.className = `message ${isUser ? 'user-msg' : 'ai-msg'}`;
+                div.innerHTML = `<strong>${isUser ? '👤 You' : '🤖 AI'}:</strong><br>${content}`;
+                
+                this.chatArea.appendChild(div);
+                this.chatArea.scrollTop = this.chatArea.scrollHeight;
+                return div;
+            }
+
+            async startVoiceChat() {
+                try {
+                    this.updateStatus('Connecting to OpenAI...', 'connecting');
+                    this.startBtn.disabled = true;
+                    
+                    // Set up WebRTC peer connection
+                    this.pc = new RTCPeerConnection({
+                        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                    });
+
+                    // Set up audio element for remote audio
+                    this.audioEl = document.createElement('audio');
+                    this.audioEl.autoplay = true;
+                    this.audioEl.volume = 1.0;
+
+                    // Handle incoming audio from OpenAI
+                    this.pc.ontrack = (event) => {
+                        console.log('📡 Received audio track from OpenAI');
+                        this.audioEl.srcObject = event.streams[0];
+                        this.addMessage('🔊 Audio stream connected - you should hear my voice!', false);
+                    };
+
+                    // Get microphone access
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+
+                    // Add microphone track to peer connection
+                    const micTrack = stream.getAudioTracks()[0];
+                    this.pc.addTrack(micTrack, stream);
+
+                    // Create WebRTC offer
+                    const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
+                    await this.pc.setLocalDescription(offer);
+
+                    // Send SDP offer to your backend router
+                    const response = await fetch('/api/realtime/session', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sdpOffer: offer.sdp,
+                            model: 'gpt-4o-realtime-preview',
+                            voice: this.currentVoice,
+                            instructions: 'You are an AI assistant. You must ALWAYS respond in English only, regardless of the input language. Be conversational, helpful, and natural. Never use Spanish or any other language.'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`SDP exchange failed: ${response.status} ${await response.text()}`);
+                    }
+
+                    // Get SDP answer from OpenAI
+                    const sdpAnswer = await response.text();
+                    await this.pc.setRemoteDescription({
+                        type: 'answer',
+                        sdp: sdpAnswer
+                    });
+
+                    this.isConnected = true;
+                    this.updateStatus('Connected - Voice chat active!', 'connected');
+                    this.stopBtn.disabled = false;
+                    
+                    this.addMessage(`🎙️ WebRTC connection established with ${this.currentVoice} voice!`, false);
+                    this.addMessage('🗣️ Just start speaking - the system will hear you and respond automatically in English!', false);
+                    
+                    // Log the voice being used
+                    console.log('🎵 Connected with voice:', this.currentVoice);
+
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    this.updateStatus('Connection failed', 'idle');
+                    this.startBtn.disabled = false;
+                    this.addMessage('❌ Failed to connect: ' + error.message, false);
+                }
+            }
+
+            changeVoice() {
+                const selectedValue = this.voiceSelect.value;
+                this.currentVoice = selectedValue;
+                this.addMessage(`🎵 Voice changed to ${this.currentVoice} (English) - will apply on next connection`, false);
+                console.log('🎵 Voice updated to:', this.currentVoice);
+            }
+
+            stopVoiceChat() {
+                if (this.pc) {
+                    this.pc.close();
+                    this.pc = null;
+                }
+                
+                if (this.audioEl) {
+                    this.audioEl.srcObject = null;
+                }
+                
+                this.isConnected = false;
+                this.updateStatus('Disconnected', 'idle');
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                
+                this.addMessage('👋 Voice chat ended', false);
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CleanVoiceChat();
+        });
+    </script>
+</body>
+</html>
