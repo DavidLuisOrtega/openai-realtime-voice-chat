@@ -10,8 +10,8 @@ router.post("/session", async (req, res) => {
 
     console.log(`🎵 Setting up session with voice: ${voice} (English)`);
     
-    // Ensure English responses regardless of voice
-    const sessionInstructions = instructions || 'You are an AI assistant. Always respond in English only. Be conversational and helpful.';
+    // Strong English enforcement - server controls all instructions
+    const sessionInstructions = 'You are an AI assistant. You MUST ALWAYS respond in English only, regardless of what language the user speaks. Never use Spanish or any other language. Be conversational, helpful, and natural.';
     console.log(`📝 Instructions: ${sessionInstructions.substring(0, 50)}...`);
     
     const url = `https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}&voice=${encodeURIComponent(voice)}&instructions=${encodeURIComponent(sessionInstructions)}`;
