@@ -1,15 +1,48 @@
 {
-  "name": "openai-realtime-voice",
+  "name": "openai-realtime-voice-service",
   "version": "1.0.0",
-  "description": "Clean OpenAI Realtime API Voice Chat",
+  "description": "Reusable OpenAI Realtime Voice Chat Service Package",
   "type": "module",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./service": "./lib/RealtimeVoiceService.js",
+    "./router": "./lib/routes/realtime.js",
+    "./client": "./public/index.html"
   },
+  "scripts": {
+    "start": "node lib/server.js",
+    "dev": "node --watch lib/server.js",
+    "example": "node examples/basic-usage.js",
+    "test": "node examples/test-service.js"
+  },
+  "keywords": [
+    "openai",
+    "realtime",
+    "voice",
+    "chat",
+    "webrtc",
+    "ai",
+    "service"
+  ],
   "dependencies": {
     "express": "^4.18.2",
     "dotenv": "^16.3.1"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
+  },
+  "files": [
+    "lib/",
+    "public/",
+    "examples/",
+    "index.js",
+    "README.md"
+  ],
+  "author": "David Luis Ortega",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DavidLuisOrtega/openai-realtime-voice-chat.git"
   }
 }
